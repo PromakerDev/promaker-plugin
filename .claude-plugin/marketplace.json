@@ -1,7 +1,8 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "promaker",
-  "description": "Promaker managed platform plugin — skills for sites/apps plus Promaker GitHub MCP",
+  "metadata": {
+    "description": "Promaker managed platform plugin — skills for sites/apps plus Promaker GitHub MCP"
+  },
   "owner": {
     "name": "Guillermo Gallo",
     "email": "guillermo.gallo@devsprouts.com"
@@ -10,7 +11,7 @@
     {
       "name": "promaker",
       "description": "Promaker managed platform skills (sites + apps) plus Promaker GitHub MCP integration.",
-      "source": ".",
+      "source": "./plugins/promaker",
       "category": "productivity"
     }
   ]
