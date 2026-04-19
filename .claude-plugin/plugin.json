@@ -1,0 +1,10 @@
+{
+  "name": "promaker",
+  "version": "0.1.0",
+  "description": "Promaker managed platform skills (sites + apps) plus Promaker GitHub MCP integration.",
+  "author": {
+    "name": "Guillermo Gallo",
+    "email": "guillermo.gallo@devsprouts.com"
+  },
+  "keywords": ["promaker", "dokploy", "managed-sites", "managed-apps"]
+}
