@@ -89,7 +89,22 @@ desarrollo." Map:
 Default to `production` only if operator says "no sé" / "da igual",
 after confirming.
 
-### 5. Derived: `site_name`
+### 5. Nombre visible del cliente (opcional)
+
+Only asked when the client is **new** (didn't match the listing in
+step 1). The slug is stored everywhere, but the Contacts Admin UI
+can show a friendlier name (e.g. "Acme Widgets" instead of
+`acme_widgets`). Ask:
+
+> "¿Cómo querés que aparezca el cliente en el panel de contactos?
+> (podés dejarlo vacío y uso el nombre corto)"
+
+Accept anything up to ~100 chars or empty. Store as
+`tenant_display_name`. If the client already exists (matched the
+listing), skip this step — the platform keeps the display name the
+operator set the first time.
+
+### 6. Derived: `site_name`
 
 Derive yourself: repo name after the slash, lowercased, `-` → `_`.
 Must match `^[a-z][a-z0-9_]*$`. If it doesn't, ask for a short
@@ -125,18 +140,21 @@ actions_run_trigger({
   workflow_id: "onboard.yml",
   ref:         "main",
   inputs: {
-    tenant:      "<normalized snake_case client name>",
-    target_repo: "<owner>/<repo>",
-    site_name:   "<derived snake_case>",
-    domain:      "<validated hostname>",
-    environment: "production" | "staging" | "development",
-    auto_merge:  "true"
+    tenant:              "<normalized snake_case client name>",
+    tenant_display_name: "<friendly name>",   // optional; omit or empty string if operator skipped step 5
+    target_repo:         "<owner>/<repo>",
+    site_name:           "<derived snake_case>",
+    domain:              "<validated hostname>",
+    environment:         "production" | "staging" | "development",
+    auto_merge:          "true"
   }
 })
 ```
 
 All input values must be strings — workflow_dispatch booleans are
-serialised as `"true"` / `"false"`.
+serialised as `"true"` / `"false"`. Omit `tenant_display_name`
+entirely (or pass `""`) when the operator didn't provide one — the
+workflow defaults to the slug.
 
 On tool error:
 - 401/403: "Parece que no tengo permisos. Avisale al equipo técnico que
