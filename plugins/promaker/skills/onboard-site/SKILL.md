@@ -75,8 +75,28 @@ Promaker en GitHub."
 
 ### 3. Dominio
 
-Must look like a hostname. Lowercase it. Reject emails, URLs with
-schemes, or hostnames with spaces with a friendly message.
+Accepted shapes:
+- Just a hostname: `sitio.ejemplo.com` → publicado en la raíz del dominio.
+- Hostname with a subpath: `sitio.ejemplo.com/landing` → publicado en
+  `https://sitio.ejemplo.com/landing`. Anything after the first `/`
+  is the path; nested paths like `sitio.ejemplo.com/a/b` are fine.
+
+Lowercase the hostname part. Keep the path case as typed (lowercased
+only if the operator explicitly asked). Reject:
+
+- Emails (contains `@`).
+- URLs with schemes (`http://`, `https://`) — tell the operator to
+  drop the `https://` prefix.
+- Whitespace anywhere.
+- Paths containing query strings (`?`) or fragments (`#`).
+
+If the operator pastes `https://sitio.ejemplo.com/landing`, strip
+the scheme and keep `sitio.ejemplo.com/landing`. Don't make them
+re-type.
+
+Pass the whole string (hostname + optional path) through to the
+workflow as the `domain` input — the onboarding process itself
+splits them out and configures the site to respond on that path.
 
 ### 4. Entorno
 
