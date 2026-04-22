@@ -1,6 +1,6 @@
 ---
 name: report-site-down
-description: Diagnose a site that "is not working" for a non-technical operator. Resolves the site via the Promaker GitHub MCP, pulls deployments, build logs and runtime logs directly from Dokploy, probes the public URL, and explains what it found in plain Spanish with a concrete next step. Use when the operator says "el sitio X no funciona", "está caído", "no anda", "no carga", "me aparece error".
+description: Diagnostic-only fallback for a site that "is not working" — use when `debug-and-fix-site` has already exhausted its try-harder loop or when the operator explicitly says "no toques nada, solo decime qué pasa". Resolves the site via the Promaker GitHub MCP, pulls deployments, build logs and runtime logs directly from Dokploy, probes the public URL, and explains what it found in plain Spanish with a concrete next step. Takes no actions. Use when the operator says "el sitio X no funciona", "está caído", "no anda", "no carga", "me aparece error" AND they want just the diagnosis (otherwise start with `debug-and-fix-site`).
 ---
 
 # Report site down (skill instructions)
@@ -196,7 +196,7 @@ The container is up but Traefik is not routing — known bug.
 > Podemos probar publicarlo de nuevo, eso suele destrabarlo. ¿Lo
 > intento?"
 
-If they accept, hand off to `fix-site`. If they prefer to escalate,
+If they accept, hand off to `debug-and-fix-site`. If they prefer to escalate,
 tell them a técnico puede mirarlo.
 
 ### 6. http = `5xx` / container crash
@@ -253,7 +253,7 @@ offer concrete actions depending on the case:
 - Case 2: offer to start it (`start-site`).
 - Case 3: remind them to wait 30s.
 - Case 4 (transient, not systemic), 5: offer a reintento via
-  `fix-site`.
+  `debug-and-fix-site`.
 - Case 4 (systemic), 6, 7, 9: nothing they can do; confirm
   que pasás el diagnóstico al equipo técnico.
 - Case 8: offer `onboarding-status` to track progress.
@@ -266,7 +266,7 @@ offer concrete actions depending on the case:
   browser-level, or contact the hosting provider directly.
 - If the operator insists on "reiniciá el servidor" or similar,
   translate: "Ok, voy a reiniciar el sitio" → hand off to
-  `fix-site`. But only after confirmation.
+  `debug-and-fix-site`. But only after confirmation.
 - Use the Promaker GitHub MCP (`promaker_list_resources`,
   `promaker_list_deployments`, `promaker_get_build_logs`,
   `promaker_get_container_logs`) as the primary source. Only use

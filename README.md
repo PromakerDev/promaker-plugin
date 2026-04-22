@@ -4,8 +4,8 @@ Bundles the Promaker managed-platform skills (sites + apps) together with the Pr
 
 ## What's inside
 
-- **15 skills** for operating Promaker sites and apps:
-  - Sites: `fix-site`, `onboard-site`, `start-site`, `stop-site`, `move-site`, `diagnose-site`, `report-site-down`, `onboarding-status`
+- **14 skills** for operating Promaker sites and apps:
+  - Sites: `onboard-site`, `debug-and-fix-site`, `start-site`, `stop-site`, `move-site`, `report-site-down`, `onboarding-status`
   - Apps: `fix-app`, `onboard-app`, `start-app`, `stop-app`, `move-app`, `report-app-down`, `app-onboarding-status`
 - **Promaker GitHub MCP** (`https://mcp-github.pmkr.site/mcp`) exposed as `promaker-github` over HTTP.
 
@@ -18,7 +18,7 @@ Add this repo as a marketplace and install the plugin:
 /plugin install promaker
 ```
 
-Once installed, skills show up as `promaker:fix-site`, `promaker:onboard-site`, etc. The MCP server connects automatically at session start.
+Once installed, skills show up as `promaker:debug-and-fix-site`, `promaker:onboard-site`, etc. The MCP server connects automatically at session start.
 
 ## Layout
 
@@ -27,5 +27,5 @@ Once installed, skills show up as `promaker:fix-site`, `promaker:onboard-site`, 
   plugin.json         # plugin manifest
   marketplace.json    # marketplace manifest (single-plugin, source = ".")
 .mcp.json             # promaker-github HTTP MCP
-skills/               # 15 skills, one directory each with SKILL.md (+ _shared/LANGUAGE.md)
+skills/               # 14 skills, one directory each with SKILL.md (+ _shared/LANGUAGE.md)
 ```

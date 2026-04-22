@@ -269,7 +269,8 @@ run's `html_url` from `actions_get`.
 > Si querés seguir el progreso después, pedime «¿cómo va
 > **<site_name>**?» y te uso el skill **onboarding-status**. Si
 > cuando lo abras ves que algo falla, pedime «arreglá **<site_name>**»
-> y voy con **fix-site**."
+> y voy con **debug-and-fix-site** (diagnostica y arregla en un solo
+> paso)."
 
 If `site PR` is `n/a` (codemod-agent said no changes because the repo
 was already onboarded):
@@ -302,24 +303,24 @@ the `actions_list / list_workflow_jobs` response — find the step with
 `conclusion == "failure"` and match its `name` against the table
 above.
 
-After cualquier mensaje de error, ofrecé el camino de recuperación —
-siempre arrancá por el **diagnóstico técnico** (`diagnose-site`), que
-resuelve el sitio, mira los deploys, build-logs y runtime-logs vía el
-Promaker GitHub MCP y recomienda el próximo paso:
+After cualquier mensaje de error, ofrecé el camino de recuperación:
+arrancá siempre por **debug-and-fix-site**, que diagnostica y — si
+es algo recuperable — arregla en el mismo paso (usa el Promaker
+GitHub MCP para ver deploys, build-logs y runtime-logs, y puede
+aplicar arreglos simples en el código del sitio como reescribir
+`npm ci` → `npm install` si el archivo de candados está desfasado).
 
-> "Para entender qué quedó tocado en el sistema, pedile al equipo
-> técnico que corra el skill **diagnose-site** con
-> **<site_name>**. El diagnóstico te dice si alcanza con un arreglo
-> automático (**fix-site**) o si hay que escalar con
-> **report-site-down**."
+> "Para intentar recuperar **<site_name>** ya mismo, pedime «arreglá
+> **<site_name>**» y disparo **debug-and-fix-site**. Si el problema
+> es severo y no se puede arreglar automático, paso a
+> **report-site-down** con el detalle para el equipo técnico."
 
 (Esto aplica especialmente al caso "Scaffold" — el sitio puede haber
-quedado a medio crear en el sistema y `diagnose-site` va a detectar
-si alcanza con un redeploy por **fix-site** o si es algo más severo
-que necesita **report-site-down**. Para los casos "Pre-check" y
-"codemod-agent" el problema es upstream y ninguno de los arreglos
-automáticos va a ayudar — igual, el diagnóstico confirma que no hay
-nada operable del lado del sistema.)
+quedado a medio crear en el sistema y `debug-and-fix-site` suele
+enderezarlo con un redeploy. Para los casos "Pre-check" y
+"codemod-agent" el problema es upstream y ningún arreglo automático
+va a ayudar — igual, el skill lo detecta y escala a
+`report-site-down` solo.)
 
 ### `cancelled`
 

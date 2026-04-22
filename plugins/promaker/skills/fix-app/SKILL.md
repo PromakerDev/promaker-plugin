@@ -6,9 +6,9 @@ description: Diagnose a Dokploy app that is failing or returning errors and try 
 # Fix a broken app
 
 Engineering-facing diagnose + recovery loop for apps in
-`managed-apps-infrastructure`. Mirror of the operator's `fix-site`
-skill but technical — quote raw error messages, mention Dokploy /
-Traefik / containers freely, no Spanish.
+`managed-apps-infrastructure`. Counterpart to the sites suite's
+`debug-and-fix-site`, but engineer-tone (quote raw error messages,
+mention Dokploy / Traefik / containers freely, no Spanish).
 
 The companion skills are `onboard-app`, `move-app`, `start-app`,
 `stop-app`, `report-app-down`, `app-onboarding-status`.
