@@ -302,19 +302,24 @@ the `actions_list / list_workflow_jobs` response — find the step with
 `conclusion == "failure"` and match its `name` against the table
 above.
 
-After cualquier mensaje de error, ofrecé el camino de recuperación:
+After cualquier mensaje de error, ofrecé el camino de recuperación —
+siempre arrancá por el **diagnóstico técnico** (`diagnose-site`), que
+resuelve el sitio, mira los deploys, build-logs y runtime-logs vía el
+Promaker GitHub MCP y recomienda el próximo paso:
 
-> "Si el sitio igual quedó parcialmente registrado, podés pedirme
-> «arreglá **<site_name>**» y pruebo con **fix-site** (intenta
-> reactivarlo o publicarlo de nuevo automáticamente). Si fix-site no
-> lo logra, pasamos al diagnóstico detallado con
+> "Para entender qué quedó tocado en el sistema, pedile al equipo
+> técnico que corra el skill **diagnose-site** con
+> **<site_name>**. El diagnóstico te dice si alcanza con un arreglo
+> automático (**fix-site**) o si hay que escalar con
 > **report-site-down**."
 
 (Esto aplica especialmente al caso "Scaffold" — el sitio puede haber
-quedado a medio crear en el sistema y un fix-site rapidito lo
-endereza. Para los casos "Pre-check" y "codemod-agent" el problema
-es upstream y fix-site no va a ayudar — solo mencioná las skills si
-realmente parece que el sitio quedó tocado en el sistema.)
+quedado a medio crear en el sistema y `diagnose-site` va a detectar
+si alcanza con un redeploy por **fix-site** o si es algo más severo
+que necesita **report-site-down**. Para los casos "Pre-check" y
+"codemod-agent" el problema es upstream y ninguno de los arreglos
+automáticos va a ayudar — igual, el diagnóstico confirma que no hay
+nada operable del lado del sistema.)
 
 ### `cancelled`
 
