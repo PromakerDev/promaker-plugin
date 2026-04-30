@@ -213,14 +213,163 @@ On confirmation, dispatch `manage-site.yml action=redeploy`.
 
 `state = done` + `http = 502`, runtime logs empty or only INFO.
 
+A 502 with the container healthy almost always means the Traefik
+router for this Host() is pointing at the wrong upstream. Two
+sub-cases that need different fixes:
+
+- **C.1** — A *different* app on the same Dokploy host is also
+  declaring `Host(<this domain>)` from a stale dynamic config file
+  (e.g. a deleted/stopped app whose `.yml` was never cleaned up).
+  The duplicate router has identical priority, so on the next
+  Traefik reload the routing may flip to the dead upstream and stay
+  there until the next reload. Redeploy does **not** fix this —
+  only deleting the orphan `.yml` does (needs SSH on the host).
+- **C.2** — Routing was momentarily dropped on a deploy (the
+  upstream Dokploy bug `traefik-refresh.yml` patches). A redeploy
+  refreshes it.
+
+C.1 happens often enough on shared Dokploy hosts that we always
+check for it first — the detector workflow is cheap (read-only,
+~10s) and a redeploy under C.1 wastes the user's time without
+changing anything.
+
+#### C.0 — Detect competing routers (cheap, read-only)
+
+Dispatch `detect-traefik-orphans.yml` filtered to the affected host:
+
+```
+actions_run_trigger({
+  method:      "run_workflow",
+  owner:       "PromakerDev",
+  repo:        "managed-sites-onboarder",
+  workflow_id: "detect-traefik-orphans.yml",
+  ref:         "main",
+  inputs: {
+    host: "<hostname of primary_url, no scheme, no path>"
+  }
+})
+```
+
+Poll with `actions_get(method=get_workflow_run)` every 5–10 s until
+`status == "completed"`. Then pull the run logs:
+
+```
+get_job_logs({
+  owner:           "PromakerDev",
+  repo:            "managed-sites-onboarder",
+  run_id:          <run_id>,
+  return_content:  true,
+  tail_lines:      1000
+})
+```
+
+Extract the JSON between `::group::PROMAKER_TRAEFIK_ORPHANS_JSON`
+and `::endgroup::` (mirrors `PROMAKER_SITE_STATUS_JSON` in
+`manage-site.yml`). Parse it. The shape:
+
+```jsonc
+{
+  "host_filter": "asesorate.rescate.com.ar",
+  "host_count": 1,
+  "conflicts": [
+    {
+      "host": "asesorate.rescate.com.ar",
+      "files": ["app-copy-bluetooth-transmitter-tzrlwn.yml",
+                "rescate-jbbusr.yml"],
+      "competing_apps": [
+        { "file": "rescate-jbbusr.yml",
+          "swarm_service": "rescate-jbbusr",
+          "replicas": "0/0",
+          "all_dead": true,
+          "router_names": ["rescate-jbbusr-router-138",
+                           "rescate-jbbusr-router-websecure-138"] }
+      ]
+    }
+  ],
+  "orphans": [ /* routers whose upstream is at 0 replicas */ ]
+}
+```
+
+Branch on the result:
+
+#### C.1 — Conflict identified (route a switch to C.1.a or C.1.b)
+
+`report.conflicts` contains an entry whose `host` matches our
+domain. Pick the competing entry — the one whose `swarm_service`
+does **not** match the current site's `appName` (from Step 1).
+
+Inspect that entry's `all_dead` flag:
+
+##### C.1.a — Competing app is dead (the common orphan case)
+
+`competing_app.all_dead == true` (replicas like `0/0`, `0/1`).
+
+> ES: "Encontré la causa: hay otra app en la misma plataforma con
+> una ruta vieja apuntando a tu dominio **<dominio>**. Se llama
+> **`<competing_swarm_service>`** y está apagada (réplicas
+> `<replicas>`), pero el archivo de ruteo quedó dando vueltas. Cada
+> tanto el sistema lo elige por error y manda el tráfico al servicio
+> apagado — por eso te aparece "Bad Gateway".
+>
+> No se resuelve publicando de nuevo. Hay que borrar el archivo
+> viejo en el servidor (lo hace alguien con acceso técnico). Te paso
+> al diagnóstico detallado con toda esta info."
+> EN: "Root cause identified: another app on the same Dokploy host
+> has a stale dynamic config file (`<file>`) claiming the same
+> `Host(<domain>)`. The competing service `<swarm_service>` is at
+> `<replicas>` (dead). Both routers share priority, so Traefik
+> flips between them on each reload — a redeploy won't help; the
+> only fix is removing `/etc/dokploy/traefik/dynamic/<file>` from
+> the host (requires SSH). Handing off to `report-site-down` with
+> the full diagnosis."
+
+Bundle the conflict block + competing-app details into the
+report-site-down handoff (Branch G). **Do not redeploy.** Stop.
+
+##### C.1.b — Competing app is alive (genuine domain collision)
+
+`competing_app.all_dead == false` (replicas like `1/1`). This is a
+worse case — two **active** apps fighting for the same hostname.
+
+> ES: "Hay otra app activa registrada con el mismo dominio
+> **<dominio>**: **`<competing_swarm_service>`** (réplicas
+> `<replicas>`). Esto es una colisión real, no un archivo huérfano —
+> alguien probablemente onboardeó un sitio con un dominio ya en
+> uso. Necesita decisión humana sobre cuál de los dos debe quedar.
+> Te paso al diagnóstico detallado."
+> EN: "Two live apps claim `Host(<domain>)`:
+> `<our_swarm_service>` and `<competing_swarm_service>` (both with
+> running replicas). Genuine collision — needs a human call on
+> which one stays. Handing off to `report-site-down`."
+
+Hand off to `report-site-down`. **Do not redeploy.** Stop.
+
+#### C.2 — No conflict, fall back to a redeploy attempt
+
+`report.conflicts` is empty for our host (or only contains entries
+where every router belongs to our own site).
+
 > ES: "**<name>** está respondiendo con error pero no veo nada claro
-> en los registros. Probemos publicarlo de nuevo (a veces lo
-> arregla); si vuelve a fallar, paso a revisar el código."
-> EN: "**<name>** returns 502 with no clear signal in runtime logs.
-> Trying redeploy first — if it doesn't clear, I'll drill into the
-> build."
+> en los registros ni rutas duplicadas. Probemos publicarlo de nuevo
+> (a veces lo arregla); si vuelve a fallar, paso a revisar el
+> código."
+> EN: "**<name>** returns 502 with no clear signal in runtime logs
+> and no duplicate Traefik routes. Trying redeploy first — if it
+> doesn't clear, I'll drill into the build."
 
 On confirmation, dispatch `manage-site.yml action=redeploy`.
+
+#### C.3 — Detector workflow itself failed
+
+`actions_run_trigger` returned an error, the run conclusion was not
+`success`, OR the JSON couldn't be parsed.
+
+Don't block on it — log a one-line warning to the user and fall
+through to C.2 (redeploy). The detector is best-effort.
+
+> ES: "(No pude correr el chequeo de rutas duplicadas — sigo con la
+> publicación de nuevo igual.)"
+> EN: "(Orphan-route check failed; falling back to redeploy.)"
 
 ### Branch D — Transient build failure
 
@@ -492,7 +641,10 @@ Escalate via Branch G.
 - **3-attempt cap per session, each attempt materially different.**
   If the same class of fix (e.g. bare redeploy) wouldn't change the
   outcome, it doesn't count as a distinct attempt — escalate
-  instead.
+  instead. **Read-only diagnostic dispatches do NOT count against
+  the cap** (Step 2 status pulls, the orphan-router detector in
+  C.0). Only state-changing dispatches do (start / stop / redeploy
+  / code fix + redeploy).
 - **Never propose changes beyond the patterns listed in Branch E.**
   If the build log shows a different kind of code bug (logic error,
   missing env var, TS compile error, etc.), surface it and escalate;
@@ -515,9 +667,13 @@ Escalate via Branch G.
   - Use the Promaker GitHub MCP (`promaker_list_resources`,
     `promaker_list_deployments`, `promaker_get_build_logs`,
     `promaker_get_container_logs`) for resolution + status + logs.
-  - Use the official `github/github-mcp-server` (`actions_*`) for
-    dispatching `manage-site.yml` and reading workflow runs /
-    onboarding history.
+  - Use the official `github/github-mcp-server` (`actions_*`,
+    `get_job_logs`) for dispatching `manage-site.yml` /
+    `detect-traefik-orphans.yml` and reading workflow runs +
+    onboarding history. The orphan-detector run is read-only and
+    its JSON report is parsed from the run logs (block tagged
+    `PROMAKER_TRAEFIK_ORPHANS_JSON`, mirrors the
+    `PROMAKER_SITE_STATUS_JSON` pattern).
   - Use `get_file_contents` + `create_or_update_file` for code
     fixes in Branch E.
   - Use `WebFetch` for the public URL probe.
